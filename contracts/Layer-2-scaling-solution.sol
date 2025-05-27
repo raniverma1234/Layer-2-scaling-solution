@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
  * @title Layer2ScalingSolution
  * @dev A simplified state channel implementation for off-chain transactions
  * @notice This contract enables users to open payment channels, conduct off-chain transactions, and settle on-chain
- */
+ 
 contract Layer2ScalingSolution is ReentrancyGuard {
     using ECDSA for bytes32;
     using MessageHashUtils for bytes32;
