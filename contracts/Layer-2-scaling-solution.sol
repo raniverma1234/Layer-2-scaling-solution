@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /**
- * @title Layer2ScalingSolution
+ * @title Layer2Scaling
  * @dev A simplified state channel implementation for off-chain transactions
  * @notice This contract enables users to open payment channels, conduct off-chain transactions, and settle on-chain
  
