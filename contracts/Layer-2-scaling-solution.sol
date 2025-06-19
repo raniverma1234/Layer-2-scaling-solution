@@ -71,10 +71,7 @@ contract Layer2ScalingSolution is ReentrancyGuard {
         totalChannels++;
         
         emit ChannelOpened(channelId, msg.sender, _participant2, msg.value, 0);
-        return channelId;
-    }
-
-    /**
+        return channel
      * @dev Updates the channel state with signed transactions from both participants
      * @param _channelId The channel identifier
      * @param _balance1 New balance for participant1
