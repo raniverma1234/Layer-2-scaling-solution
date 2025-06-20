@@ -142,9 +142,7 @@ contract Layer2ScalingSolution is ReentrancyGuard {
             require(block.timestamp >= channel.timeout, "Challenge period not over");
         }
 
-        // Distribute funds
-        uint256 balance1 = channel.balance1;
-        uint256 balance2 = channel.balance2;
+    
         
         channel.isActive = false;
         channel.balance1 = 0;
