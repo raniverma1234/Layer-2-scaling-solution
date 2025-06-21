@@ -107,10 +107,6 @@ contract Layer2ScalingSolution is ReentrancyGuard {
             "Invalid signatures"
         );
 
-        // Update channel state
-        channel.balance1 = _balance1;
-        channel.balance2 = _balance2;
-        channel.nonce = _nonce;
 
         // Store latest state for potential disputes
         latestStates[_channelId] = StateUpdate({
