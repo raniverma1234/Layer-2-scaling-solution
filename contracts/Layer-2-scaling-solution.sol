@@ -31,7 +31,7 @@ contract Layer2ScalingSolution is ReentrancyGuard {
         uint256 balance2;
         uint256 nonce;
         bytes signature1;
-        bytes signature2;
+ 
     }
 
     mapping(bytes32 => Channel) public channels;
