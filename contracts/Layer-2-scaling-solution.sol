@@ -16,7 +16,7 @@ contract Layer2ScalingSolution is ReentrancyGuard {
 
     struct Channel {
         address participant1;
-        address participant2;
+        address participant2; 
         uint256 balance1;
         uint256 balance2;
         uint256 nonce;
