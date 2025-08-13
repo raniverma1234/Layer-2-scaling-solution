@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: 
+// SPDX-License-Identifier: mit
 pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -180,3 +180,4 @@ contract Layer2ScalingSolution is ReentrancyGuard {
 
     receive() external payable {}
 }
+
