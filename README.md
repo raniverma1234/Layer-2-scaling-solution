@@ -1,4 +1,4 @@
-# Layer 2 Scaling Solution
+# Layer 2 Scaling Solution.
 
 A sophisticated Layer 2 scaling solution implementing state channels for off-chain transactions, deployed on Core Testnet 2. This project enables users to conduct high-frequency, low-cost transactions off-chain while maintaining the security guarantees of the underlying blockchain.
 
