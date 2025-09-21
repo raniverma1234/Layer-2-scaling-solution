@@ -14,7 +14,7 @@ Our vision is to democratize blockchain scalability by providing an accessible, 
 
 By implementing state channels, we envision a future where users can enjoy instant, near-zero-cost transactions while retaining the trustless nature of blockchain technology. This solution serves as a foundation for more complex Layer 2 implementations and contributes to the broader ecosystem of blockchain scaling solutions.
 
-## Key Features
+## Key Features..
 
 ### 🚀 **State Channel Implementation**
 - Open payment channels between two participants with initial deposits
