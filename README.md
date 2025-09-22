@@ -27,7 +27,7 @@ By implementing state channels, we envision a future where users can enjoy insta
 - Challenge period for dispute resolution (1 day default)
 - Cryptographic proof verification using ECDSA signatures
 
-### ⚡ **Performance & Efficiency**
+### ⚡ Performance & Efficiency
 - Near-instant off-chain transaction processing
 - Minimal gas costs (only for opening and closing channels)
 - Support for high-frequency micropayments
