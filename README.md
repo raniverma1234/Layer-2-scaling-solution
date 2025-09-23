@@ -67,7 +67,7 @@ By implementing state channels, we envision a future where users can enjoy insta
 - **AI-powered Optimization**: Implement machine learning algorithms for optimal channel management and routing
 - **Decentralized Identity**: Integrate with DID protocols for enhanced user verification and reputation systems
 
-## Installation & Setup
+## Installation & Setup.
 
 ```bash
 # Clone the repository
