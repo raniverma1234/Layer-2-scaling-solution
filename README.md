@@ -2,7 +2,7 @@
 
 A sophisticated Layer 2 scaling solution implementing state channels for off-chain transactions, deployed on Core Testnet 2. This project enables users to conduct high-frequency, low-cost transactions off-chain while maintaining the security guarantees of the underlying blockchain.
 
-## Project Description
+## Project Description.
 
 The Layer 2 Scaling Solution is a smart contract-based implementation of payment channels that allows two parties to transact off-chain with minimal on-chain footprint. Users can open channels, conduct unlimited off-chain transactions, and settle the final state on-chain, dramatically reducing gas costs and increasing transaction throughput.
 
