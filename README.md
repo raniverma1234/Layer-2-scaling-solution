@@ -8,7 +8,7 @@ The Layer 2 Scaling Solution is a smart contract-based implementation of payment
 
 The system implements a simplified state channel mechanism with dispute resolution, cryptographic signature verification, and automated settlement processes. This approach is particularly useful for micropayments, gaming applications, and high-frequency trading scenarios where traditional on-chain transactions would be cost-prohibitive.
 
-## Project Vision.
+## Project Vision
 
 Our vision is to democratize blockchain scalability by providing an accessible, secure, and efficient Layer 2 solution that bridges the gap between blockchain security and real-world usability. We aim to enable mass adoption of decentralized applications by solving the blockchain trilemma of scalability, security, and decentralization.
 
