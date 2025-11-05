@@ -1,204 +1,273 @@
-// SPDX-License-Identifier:  
-pragma solidity ^0.8.19;
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.26;
 
 /**
- * @title Layer2Scaling
- * @dev A simplified state channel imp]]]lementation for off-chain transactions
- enables users to open payment channels, conduct off-chain transactions, and settle on-chain
- 
-contract Layer2ScalingSolution is ReentrancyGuard {
-    using ECDSA for bytes32;
-    using MessageHashUtils for bytes32;
+ * @title Layer2ScalingSolution
+ * @notice A conceptual smart contract simulating a Layer 2 scaling mechanism on Ethereum.
+ * @dev This Layer 2 solution allows users to deposit assets on Layer 1, transact off-chain,
+ *      and finalize their state securely with on-chain validation and fraud detection.
+ *
+ * Key Components:
+ * - Deposit bridge (L1 → L2)
+ * - Withdrawal requests (L2 → L1)
+ * - Batch submission with verification
+ * - Fraud-proof simulation for malicious batches
+ * - Governance and upgrade hooks for admin
+ *
+ * NOTE: This is a conceptual prototype for educational and research purposes.
+ */
+contract Project {
+    // ======================================================
+    // Core Variables
+    // ======================================================
 
-    struct Channel {
-        address participant1;
-        address participant2; 
-        uint256 balance1;
-        uint256 balance2;
-        uint256 nonce;
-        uint256 timeout;
-        bool isActive;
-        bool isDisputed;
+    address public admin;
+    uint256 public totalDeposits;
+    uint256 public totalWithdrawals;
+    uint256 public batchCount;
+    bool public emergencyHalt;
+
+    struct Deposit {
+        uint256 id;
+        address depositor;
+        uint256 amount;
+        uint256 timestamp;
+        bool processed;
     }
 
-    struct StateUpdate {
-        bytes32 channelId;
-        uint256 balance1;
-        uint256 balance2;
-        uint256 nonce;
-        bytes signature1;
- 
+    struct Withdrawal {
+        uint256 id;
+        address withdrawer;
+        uint256 amount;
+        uint256 timestamp;
+        bool completed;
     }
 
-    mapping(bytes32 => Channel) public channels;
-    mapping(bytes32 => StateUpdate) public latestStates;
-    
-    uint256 public constant CHALLENGE_PERIOD = 1 days;
-    uint256 public totalChannels;
-    
-    event ChannelOpened(bytes32 indexed channelId, address indexed participant1, address indexed participant2, uint256 amount1, uint256 amount2);
-    event ChannelClosed(bytes32 indexed channelId, uint256 finalBalance1, uint256 finalBalance2);
-    event StateUpdated(bytes32 indexed channelId, uint256 nonce, uint256 balance1, uint256 balance2);
-    event DisputeRaised(bytes32 indexed channelId, address indexed challenger);
+    struct Batch {
+        uint256 id;
+        string stateRootHash;
+        address proposer;
+        uint256 timestamp;
+        bool verified;
+        bool challenged;
+    }
+
+    mapping(uint256 => Deposit) public deposits;
+    mapping(uint256 => Withdrawal) public withdrawals;
+    mapping(uint256 => Batch) public batches;
+
+    mapping(address => uint256) public userBalances;
+
+    uint256 private depositCounter;
+    uint256 private withdrawalCounter;
+
+    // ======================================================
+    // Events
+    // ======================================================
+
+    event DepositInitiated(uint256 indexed id, address indexed depositor, uint256 amount);
+    event WithdrawalRequested(uint256 indexed id, address indexed withdrawer, uint256 amount);
+    event WithdrawalCompleted(uint256 indexed id, address indexed withdrawer, uint256 amount);
+    event BatchSubmitted(uint256 indexed id, string stateRootHash, address indexed proposer);
+    event BatchVerified(uint256 indexed id, address indexed verifier);
+    event FraudDetected(uint256 indexed id, address indexed reporter);
+    event EmergencyHaltActivated(address indexed by);
+    event AdminChanged(address indexed oldAdmin, address indexed newAdmin);
+
+    // ======================================================
+    // Modifiers
+    // ======================================================
+
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "Only admin can perform this action");
+        _;
+    }
+
+    modifier notHalted() {
+        require(!emergencyHalt, "System is halted");
+        _;
+    }
+
+    // ======================================================
+    // Constructor
+    // ======================================================
+
+    constructor() {
+        admin = msg.sender;
+    }
+
+    // ======================================================
+    // Layer 1 → Layer 2 Bridge (Deposits)
+    // ======================================================
 
     /**
-     * @dev Opens a new payment channel between two participants
-     * @param _participant2 Address of the second participant
-     * @return channelId The unique identifier for the created channel
+     * @notice Deposit funds to Layer 2 (simulated bridge).
      */
-    function openChannel(address _participant2) external payable nonReentrant returns (bytes32) {
-        require(_participant2 != address(0), "Invalid participant address");
-        require(_participant2 != msg.sender, "Cannot create channel with yourself");
-        require(msg.value > 0, "Must deposit some funds");
+    function depositToL2() external payable notHalted {
+        require(msg.value > 0, "Deposit amount must be greater than zero");
 
-        bytes32 channelId = keccak256(abi.encodePacked(msg.sender, _participant2, block.timestamp, totalChannels));
-        
-        channels[channelId] = Channel({
-            participant1: msg.sender,
-            participant2: _participant2,
-            balance1: msg.value,
-            balance2: 0,
-            nonce: 0,
-            timeout: 0,
-            isActive: true,
-            isDisputed: false
+        depositCounter++;
+        totalDeposits += msg.value;
+        userBalances[msg.sender] += msg.value;
+
+        deposits[depositCounter] = Deposit({
+            id: depositCounter,
+            depositor: msg.sender,
+            amount: msg.value,
+            timestamp: block.timestamp,
+            processed: false
         });
 
-        totalChannels++;
-        
-        emit ChannelOpened(channelId, msg.sender, _participant2, msg.value, 0);
-        return channel
-     * @dev Updates the channel state with signed transactions from both participants
-     * @param _channelId The channel identifier
-     * @param _balance1 New balance for participant1
-     * @param _balance2 New balance for participant2
-     * @param _nonce Transaction nonce (must be greater than current)
-     * @param _signature1 Signature from participant1
-     * @param _signature2 Signature from participant2
+        emit DepositInitiated(depositCounter, msg.sender, msg.value);
+    }
+
+    // ======================================================
+    // Layer 2 → Layer 1 Bridge (Withdrawals)
+    // ======================================================
+
+    /**
+     * @notice Request withdrawal from Layer 2 back to Layer 1.
+     * @param _amount The amount to withdraw.
      */
-    function updateChannelState(
-        bytes32 _channelId,
-        uint256 _balance1,
-        uint256 _balance2,
-        uint256 _nonce,
-        bytes memory _signature1,
-        bytes memory _signature2
-    ) external {
-        Channel storage channel = channels[_channelId];
-        require(channel.isActive, "Channel is not active");
-        require(!channel.isDisputed, "Channel is under dispute");
-        require(_nonce > channel.nonce, "Invalid nonce");
-        require(_balance1 + _balance2 == channel.balance1 + channel.balance2, "Balances don't match total");
+    function requestWithdrawal(uint256 _amount) external notHalted {
+        require(userBalances[msg.sender] >= _amount, "Insufficient L2 balance");
 
-        // Verify signatures
-        bytes32 messageHash = keccak256(abi.encodePacked(_channelId, _balance1, _balance2, _nonce));
-        bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
-        
-        address signer1 = ethSignedMessageHash.recover(_signature1);
-        address signer2 = ethSignedMessageHash.recover(_signature2);
-        
-        require(
-            (signer1 == channel.participant1 && signer2 == channel.participant2) ||
-            (signer1 == channel.participant2 && signer2 == channel.participant1),
-            "Invalid signatures"
-        );
+        withdrawalCounter++;
+        totalWithdrawals += _amount;
+        userBalances[msg.sender] -= _amount;
 
-
-        // Store latest state for potential disputes
-        latestStates[_channelId] = StateUpdate({
-            channelId: _channelId,
-            balance1: _balance1,
-            balance2: _balance2,
-            nonce: _nonce,
-            signature1: _signature1,
-            signature2: _signature2
+        withdrawals[withdrawalCounter] = Withdrawal({
+            id: withdrawalCounter,
+            withdrawer: msg.sender,
+            amount: _amount,
+            timestamp: block.timestamp,
+            completed: false
         });
 
-        emit StateUpdated(_channelId, _nonce, _balance1, _balance2);
+        emit WithdrawalRequested(withdrawalCounter, msg.sender, _amount);
     }
 
     /**
-     * @dev Closes a channel and distributes funds according to the latest agreed state
-     * @param _channelId The channel identifier
+     * @notice Finalize withdrawal after validation (simulated finality).
+     * @param _withdrawalId The withdrawal request ID.
      */
-    function closeChannel(bytes32 _channelId) external nonReentrant {
-        Channel storage channel = channels[_channelId];
-        require(channel.isActive, "Channel is not active");
-        require(
-            msg.sender == channel.participant1 || msg.sender == channel.participant2,
-            "Only participants can close channel"
-        );
+    function finalizeWithdrawal(uint256 _withdrawalId) external notHalted {
+        Withdrawal storage wd = withdrawals[_withdrawalId];
+        require(!wd.completed, "Withdrawal already completed");
 
-        // If channel is disputed, wait for challenge period
-        if (channel.isDisputed) {
-            require(block.timestamp >= channel.timeout, "Challenge period not over");
+        wd.completed = true;
+        payable(wd.withdrawer).transfer(wd.amount);
+
+        emit WithdrawalCompleted(_withdrawalId, wd.withdrawer, wd.amount);
+    }
+
+    // ======================================================
+    // Rollup Batch Submission & Verification
+    // ======================================================
+
+    /**
+     * @notice Submit a new state batch representing aggregated Layer 2 transactions.
+     * @param _stateRootHash The hash of the new L2 state root.
+     */
+    function submitBatch(string memory _stateRootHash) external notHalted {
+        require(bytes(_stateRootHash).length > 0, "State root hash required");
+
+        batchCount++;
+        batches[batchCount] = Batch({
+            id: batchCount,
+            stateRootHash: _stateRootHash,
+            proposer: msg.sender,
+            timestamp: block.timestamp,
+            verified: false,
+            challenged: false
+        });
+
+        emit BatchSubmitted(batchCount, _stateRootHash, msg.sender);
+    }
+
+    /**
+     * @notice Verify a batch after challenge window expires (simulated optimistic rollup).
+     * @param _batchId ID of the batch to verify.
+     */
+    function verifyBatch(uint256 _batchId) external onlyAdmin notHalted {
+        Batch storage b = batches[_batchId];
+        require(!b.verified, "Batch already verified");
+        require(!b.challenged, "Batch is under challenge");
+
+        b.verified = true;
+        emit BatchVerified(_batchId, msg.sender);
+    }
+
+    /**
+     * @notice Report fraudulent activity in a submitted batch.
+     * @param _batchId ID of the fraudulent batch.
+     */
+    function reportFraud(uint256 _batchId) external notHalted {
+        Batch storage b = batches[_batchId];
+        require(!b.verified, "Already verified batch");
+        require(!b.challenged, "Batch already challenged");
+
+        b.challenged = true;
+        emergencyHalt = true;
+
+        emit FraudDetected(_batchId, msg.sender);
+        emit EmergencyHaltActivated(msg.sender);
+    }
+
+    // ======================================================
+    // Governance & Admin Functions
+    // ======================================================
+
+    /**
+     * @notice Change the admin address.
+     * @param _newAdmin New admin address.
+     */
+    function changeAdmin(address _newAdmin) external onlyAdmin {
+        require(_newAdmin != address(0), "Invalid admin address");
+        emit AdminChanged(admin, _newAdmin);
+        admin = _newAdmin;
+    }
+
+    /**
+     * @notice Toggle system emergency halt manually.
+     */
+    function toggleEmergencyHalt(bool _state) external onlyAdmin {
+        emergencyHalt = _state;
+        if (_state) {
+            emit EmergencyHaltActivated(msg.sender);
         }
-
-    
-        
-        channel.isActive = false;
-        channel.balance1 = 0;
-        channel.balance2 = 0;
-
-        // Transfer funds
-        if (balance1 > 0) {
-            payable(channel.participant1).transfer(balance1);
-        }
-        if (balance2 > 0) {
-            payable(channel.participant2).transfer(balance2);
-        }
-
-        emit ChannelClosed(_channelId, balance1, balance2);
     }
 
-    // Additional helper functions
-    function getChannelInfo(bytes32 _channelId) external view returns (Channel memory) {
-        return channels[_channelId];
+    /**
+     * @notice Get system statistics summary.
+     */
+    function getSystemStats()
+        external
+        view
+        returns (
+            uint256 totalDeposited,
+            uint256 totalWithdrawn,
+            uint256 totalBatches,
+            bool halted
+        )
+    {
+        return (totalDeposits, totalWithdrawals, batchCount, emergencyHalt);
     }
 
-    function getLatestState(bytes32 _channelId) external view returns (StateUpdate memory) {
-        return latestStates[_channelId];
+    /**
+     * @notice Get specific batch details.
+     */
+    function getBatch(uint256 _id)
+        external
+        view
+        returns (
+            string memory stateRoot,
+            address proposer,
+            bool verified,
+            bool challenged
+        )
+    {
+        Batch memory b = batches[_id];
+        return (b.stateRootHash, b.proposer, b.verified, b.challenged);
     }
-
-    // Dispute mechanism (simplified)
-    function raiseDispute(bytes32 _channelId) external {
-        Channel storage channel = channels[_channelId];
-        require(channel.isActive, "Channel is not active");
-        require(
-            msg.sender == channel.participant1 || msg.sender == channel.participant2,
-            "Only participants can raise dispute"
-        );
-
-        channel.isDisputed = true;
-        channel.timeout = block.timestamp + CHALLENGE_PERIOD;
-
-        emit DisputeRaised(_channelId, msg.sender);
-    }
-
-    receive() external payable {}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
