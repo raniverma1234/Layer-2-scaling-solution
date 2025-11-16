@@ -1,25 +1,5 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
-
-/**
- * @title Layer2ScalingSolution
- * @notice A conceptual smart contract simulating a Layer 2 scaling mechanism on Ethereum.
- * @dev This Layer 2 solution allows users to deposit assets on Layer 1, transact off-chain,
- *      and finalize their state securely with on-chain validation and fraud detection.
- *
- * Key Components:
- * - Deposit bridge (L1 → L2)
- * - Withdrawal requests (L2 → L1)
- * - Batch submission with verification
- * - Fraud-proof simulation for malicious batches
- * - Governance and upgrade hooks for admin
- *
- * NOTE: This is a conceptual prototype for educational and research purposes.
- */
-contract Project {
-    // ======================================================
-    // Core Variables
-    // ======================================================
+======================================================
+    ======================================================
 
     address public admin;
     uint256 public totalDeposits;
@@ -61,22 +41,9 @@ contract Project {
     uint256 private depositCounter;
     uint256 private withdrawalCounter;
 
-    // ======================================================
-    // Events
-    // ======================================================
-
-    event DepositInitiated(uint256 indexed id, address indexed depositor, uint256 amount);
-    event WithdrawalRequested(uint256 indexed id, address indexed withdrawer, uint256 amount);
-    event WithdrawalCompleted(uint256 indexed id, address indexed withdrawer, uint256 amount);
-    event BatchSubmitted(uint256 indexed id, string stateRootHash, address indexed proposer);
-    event BatchVerified(uint256 indexed id, address indexed verifier);
-    event FraudDetected(uint256 indexed id, address indexed reporter);
-    event EmergencyHaltActivated(address indexed by);
-    event AdminChanged(address indexed oldAdmin, address indexed newAdmin);
-
-    // ======================================================
-    // Modifiers
-    // ======================================================
+    Events
+    ======================================================
+    ======================================================
 
     modifier onlyAdmin() {
         require(msg.sender == admin, "Only admin can perform this action");
@@ -88,17 +55,9 @@ contract Project {
         _;
     }
 
-    // ======================================================
-    // Constructor
-    // ======================================================
-
-    constructor() {
-        admin = msg.sender;
-    }
-
-    // ======================================================
-    // Layer 1 → Layer 2 Bridge (Deposits)
-    // ======================================================
+    Constructor
+    ======================================================
+    ======================================================
 
     /**
      * @notice Deposit funds to Layer 2 (simulated bridge).
@@ -121,49 +80,9 @@ contract Project {
         emit DepositInitiated(depositCounter, msg.sender, msg.value);
     }
 
-    // ======================================================
-    // Layer 2 → Layer 1 Bridge (Withdrawals)
-    // ======================================================
-
-    /**
-     * @notice Request withdrawal from Layer 2 back to Layer 1.
-     * @param _amount The amount to withdraw.
-     */
-    function requestWithdrawal(uint256 _amount) external notHalted {
-        require(userBalances[msg.sender] >= _amount, "Insufficient L2 balance");
-
-        withdrawalCounter++;
-        totalWithdrawals += _amount;
-        userBalances[msg.sender] -= _amount;
-
-        withdrawals[withdrawalCounter] = Withdrawal({
-            id: withdrawalCounter,
-            withdrawer: msg.sender,
-            amount: _amount,
-            timestamp: block.timestamp,
-            completed: false
-        });
-
-        emit WithdrawalRequested(withdrawalCounter, msg.sender, _amount);
-    }
-
-    /**
-     * @notice Finalize withdrawal after validation (simulated finality).
-     * @param _withdrawalId The withdrawal request ID.
-     */
-    function finalizeWithdrawal(uint256 _withdrawalId) external notHalted {
-        Withdrawal storage wd = withdrawals[_withdrawalId];
-        require(!wd.completed, "Withdrawal already completed");
-
-        wd.completed = true;
-        payable(wd.withdrawer).transfer(wd.amount);
-
-        emit WithdrawalCompleted(_withdrawalId, wd.withdrawer, wd.amount);
-    }
-
-    // ======================================================
-    // Rollup Batch Submission & Verification
-    // ======================================================
+    Layer 2 ? Layer 1 Bridge (Withdrawals)
+    ======================================================
+    ======================================================
 
     /**
      * @notice Submit a new state batch representing aggregated Layer 2 transactions.
@@ -214,8 +133,7 @@ contract Project {
         emit EmergencyHaltActivated(msg.sender);
     }
 
-    // ======================================================
-    // Governance & Admin Functions
+    Governance & Admin Functions
     // ======================================================
 
     /**
@@ -271,3 +189,6 @@ contract Project {
         return (b.stateRootHash, b.proposer, b.verified, b.challenged);
     }
 }
+// 
+Updated on 2025-11-16
+// 
