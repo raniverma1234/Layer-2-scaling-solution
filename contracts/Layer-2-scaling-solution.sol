@@ -134,61 +134,8 @@
     }
 
     Governance & Admin Functions
-    // ======================================================
-
-    /**
-     * @notice Change the admin address.
-     * @param _newAdmin New admin address.
-     */
-    function changeAdmin(address _newAdmin) external onlyAdmin {
-        require(_newAdmin != address(0), "Invalid admin address");
-        emit AdminChanged(admin, _newAdmin);
-        admin = _newAdmin;
-    }
-
-    /**
-     * @notice Toggle system emergency halt manually.
-     */
-    function toggleEmergencyHalt(bool _state) external onlyAdmin {
-        emergencyHalt = _state;
-        if (_state) {
-            emit EmergencyHaltActivated(msg.sender);
-        }
-    }
-
-    /**
-     * @notice Get system statistics summary.
-     */
-    function getSystemStats()
-        external
-        view
-        returns (
-            uint256 totalDeposited,
-            uint256 totalWithdrawn,
-            uint256 totalBatches,
-            bool halted
-        )
-    {
-        return (totalDeposits, totalWithdrawals, batchCount, emergencyHalt);
-    }
-
-    /**
-     * @notice Get specific batch details.
-     */
-    function getBatch(uint256 _id)
-        external
-        view
-        returns (
-            string memory stateRoot,
-            address proposer,
-            bool verified,
-            bool challenged
-        )
-    {
-        Batch memory b = batches[_id];
-        return (b.stateRootHash, b.proposer, b.verified, b.challenged);
-    }
-}
+    Updated on 2025-11-16
 // 
-Updated on 2025-11-16
+// 
+Updated on 2025-11-19
 // 
