@@ -1,148 +1,113 @@
-======================================================
-    ======================================================
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.26;
+
+/**
+ * @title Layer2Scaling
+ * @notice A simplified Layer 2 scaling solution for handling deposits, off-chain transactions, and withdrawals.
+ */
+contract Layer2Scaling {
 
     address public admin;
-    uint256 public totalDeposits;
-    uint256 public totalWithdrawals;
-    uint256 public batchCount;
-    bool public emergencyHalt;
+    uint256 public userCount;
 
-    struct Deposit {
-        uint256 id;
-        address depositor;
+    struct User {
+        uint256 balance;          // L2 balance
+        uint256 lastDeposit;      // Timestamp of last deposit
+    }
+
+    struct Transaction {
+        uint256 from;
+        uint256 to;
         uint256 amount;
         uint256 timestamp;
         bool processed;
     }
 
-    struct Withdrawal {
-        uint256 id;
-        address withdrawer;
-        uint256 amount;
-        uint256 timestamp;
-        bool completed;
-    }
+    mapping(address => User) public users;
+    Transaction[] public transactions;
 
-    struct Batch {
-        uint256 id;
-        string stateRootHash;
-        address proposer;
-        uint256 timestamp;
-        bool verified;
-        bool challenged;
-    }
-
-    mapping(uint256 => Deposit) public deposits;
-    mapping(uint256 => Withdrawal) public withdrawals;
-    mapping(uint256 => Batch) public batches;
-
-    mapping(address => uint256) public userBalances;
-
-    uint256 private depositCounter;
-    uint256 private withdrawalCounter;
-
-    Events
-    ======================================================
-    ======================================================
+    event Deposit(address indexed user, uint256 amount, uint256 timestamp);
+    event TransactionCreated(uint256 indexed txId, address indexed from, address indexed to, uint256 amount);
+    event Withdrawal(address indexed user, uint256 amount, uint256 timestamp);
+    event AdminChanged(address indexed oldAdmin, address indexed newAdmin);
 
     modifier onlyAdmin() {
-        require(msg.sender == admin, "Only admin can perform this action");
+        require(msg.sender == admin, "Layer2Scaling: NOT_ADMIN");
         _;
     }
 
-    modifier notHalted() {
-        require(!emergencyHalt, "System is halted");
-        _;
+    constructor() {
+        admin = msg.sender;
     }
 
-    Constructor
-    ======================================================
-    ======================================================
+    /// @notice Deposit funds into L2
+    function deposit() external payable {
+        require(msg.value > 0, "Layer2Scaling: ZERO_DEPOSIT");
 
-    /**
-     * @notice Deposit funds to Layer 2 (simulated bridge).
-     */
-    function depositToL2() external payable notHalted {
-        require(msg.value > 0, "Deposit amount must be greater than zero");
+        User storage u = users[msg.sender];
+        u.balance += msg.value;
+        u.lastDeposit = block.timestamp;
 
-        depositCounter++;
-        totalDeposits += msg.value;
-        userBalances[msg.sender] += msg.value;
+        emit Deposit(msg.sender, msg.value, block.timestamp);
+    }
 
-        deposits[depositCounter] = Deposit({
-            id: depositCounter,
-            depositor: msg.sender,
-            amount: msg.value,
+    /// @notice Create an off-chain transaction
+    function createTransaction(address to, uint256 amount) external {
+        require(to != address(0), "Layer2Scaling: INVALID_RECIPIENT");
+        require(users[msg.sender].balance >= amount, "Layer2Scaling: INSUFFICIENT_BALANCE");
+
+        // Deduct balance immediately for L2 accounting
+        users[msg.sender].balance -= amount;
+
+        transactions.push(Transaction({
+            from: uint256(uint160(msg.sender)),
+            to: uint256(uint160(to)),
+            amount: amount,
             timestamp: block.timestamp,
             processed: false
-        });
+        }));
 
-        emit DepositInitiated(depositCounter, msg.sender, msg.value);
+        emit TransactionCreated(transactions.length - 1, msg.sender, to, amount);
     }
 
-    Layer 2 ? Layer 1 Bridge (Withdrawals)
-    ======================================================
-    ======================================================
+    /// @notice Process a transaction (admin can batch process L2 -> L1 settlement)
+    function processTransaction(uint256 txId) external onlyAdmin {
+        require(txId < transactions.length, "Layer2Scaling: TX_NOT_FOUND");
+        Transaction storage txData = transactions[txId];
+        require(!txData.processed, "Layer2Scaling: ALREADY_PROCESSED");
 
-    /**
-     * @notice Submit a new state batch representing aggregated Layer 2 transactions.
-     * @param _stateRootHash The hash of the new L2 state root.
-     */
-    function submitBatch(string memory _stateRootHash) external notHalted {
-        require(bytes(_stateRootHash).length > 0, "State root hash required");
-
-        batchCount++;
-        batches[batchCount] = Batch({
-            id: batchCount,
-            stateRootHash: _stateRootHash,
-            proposer: msg.sender,
-            timestamp: block.timestamp,
-            verified: false,
-            challenged: false
-        });
-
-        emit BatchSubmitted(batchCount, _stateRootHash, msg.sender);
+        address to = address(uint160(txData.to));
+        users[to].balance += txData.amount;
+        txData.processed = true;
     }
 
-    /**
-     * @notice Verify a batch after challenge window expires (simulated optimistic rollup).
-     * @param _batchId ID of the batch to verify.
-     */
-    function verifyBatch(uint256 _batchId) external onlyAdmin notHalted {
-        Batch storage b = batches[_batchId];
-        require(!b.verified, "Batch already verified");
-        require(!b.challenged, "Batch is under challenge");
+    /// @notice Withdraw funds back to L1
+    function withdraw(uint256 amount) external {
+        User storage u = users[msg.sender];
+        require(u.balance >= amount, "Layer2Scaling: INSUFFICIENT_BALANCE");
 
-        b.verified = true;
-        emit BatchVerified(_batchId, msg.sender);
+        u.balance -= amount;
+        payable(msg.sender).transfer(amount);
+
+        emit Withdrawal(msg.sender, amount, block.timestamp);
     }
 
-    /**
-     * @notice Report fraudulent activity in a submitted batch.
-     * @param _batchId ID of the fraudulent batch.
-     */
-    function reportFraud(uint256 _batchId) external notHalted {
-        Batch storage b = batches[_batchId];
-        require(!b.verified, "Already verified batch");
-        require(!b.challenged, "Batch already challenged");
-
-        b.challenged = true;
-        emergencyHalt = true;
-
-        emit FraudDetected(_batchId, msg.sender);
-        emit EmergencyHaltActivated(msg.sender);
+    function changeAdmin(address newAdmin) external onlyAdmin {
+        require(newAdmin != address(0), "Layer2Scaling: ZERO_ADMIN");
+        emit AdminChanged(admin, newAdmin);
+        admin = newAdmin;
     }
 
-    Governance & Admin Functions
-    Updated on 2025-11-16
-Updated on 2025-11-19
-End
-Updated on 2025-11-22
-End
-End
-End
-End
-// 
-// 
-End
-// 
+    function getTransaction(uint256 txId) external view returns (Transaction memory) {
+        require(txId < transactions.length, "Layer2Scaling: TX_NOT_FOUND");
+        return transactions[txId];
+    }
+
+    function getUserBalance(address user) external view returns (uint256) {
+        return users[user].balance;
+    }
+
+    function getTransactionCount() external view returns (uint256) {
+        return transactions.length;
+    }
+}
